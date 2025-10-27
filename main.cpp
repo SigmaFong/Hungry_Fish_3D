@@ -33,7 +33,7 @@
 // ==============================================
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
-const unsigned int GENERATE_FISH = 1;
+const unsigned int GENERATE_FISH = 20;
 const float CATCH_RADIUS = 1.2f;
 const string MODEL_SHARK_PATH = FileSystem::getPath("src/game_3d/Hungry_Fish_3D/great_white_shark.glb");
 const string MODEL_FISH_PATH = FileSystem::getPath("src/game_3d/Hungry_Fish_3D/low_poly_fish.glb");
@@ -440,7 +440,7 @@ public:
         for (int i = 0; i < GENERATE_FISH; ++i) {
             glm::vec3 spawn(
                 ((rand() % 10000) / 10000.0f - 0.5f) * 15.0f,
-                ((rand() % 10000) / 10000.0f - 0.5f) * 12.0f,
+                ((rand() % 10000) / 10000.0f - 0.5f) * 10.0f,
                 ((rand() % 10000) / 10000.0f - 0.5f) * 15.0f
             );
             Fish f;
