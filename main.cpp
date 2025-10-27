@@ -33,8 +33,17 @@
 // ==============================================
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
+const unsigned int GENERATE_FISH = 1;
+const float CATCH_RADIUS = 1.2f;
 const string MODEL_SHARK_PATH = FileSystem::getPath("src/game_3d/Hungry_Fish_3D/great_white_shark.glb");
 const string MODEL_FISH_PATH = FileSystem::getPath("src/game_3d/Hungry_Fish_3D/low_poly_fish.glb");
+
+struct Fish {
+    glm::vec3 position;
+    glm::vec3 spawnCenter;
+    glm::vec3 target;
+    float speed;
+};
 
 // ==============================================
 // Utility Functions
@@ -268,84 +277,6 @@ private:
 };
 
 // ==============================================
-// Cube
-// ==============================================
-class Cube {
-public:
-    unsigned int VAO, VBO, textureID;
-
-    bool init(const std::string& texturePath) {
-        float vertices[] = {
-            // positions          // texture Coords
-            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-             0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-             0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-             0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-             0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-             0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-             0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-
-            -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-            -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-            -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-             0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-             0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-             0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-             0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-             0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-             0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-             0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-             0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-             0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-
-            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-             0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-             0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-             0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
-        };
-
-        glGenVertexArrays(1, &VAO);
-        glGenBuffers(1, &VBO);
-        glBindVertexArray(VAO);
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-
-        textureID = loadTexture(texturePath.c_str());
-        return textureID != 0;
-    }
-
-    void draw(const Shader& shader) const {
-        shader.use();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        glBindVertexArray(0);
-    }
-};
-
-// ==============================================
 // Skybox (Cubemap)
 // ==============================================
 class Skybox {
@@ -432,20 +363,20 @@ public:
 class Application {
 public:
     GLFWwindow* window = nullptr;
-    Camera camera{ glm::vec3(0.0f, 0.0f, 3.0f) };
+    Camera camera{ glm::vec3(0.0f, 0.0f, 0.0f) };
     float deltaTime = 0.0f;
     float lastFrame = 0.0f;
     bool firstMouse = true;
     float lastX = SCR_WIDTH / 2.0f;
     float lastY = SCR_HEIGHT / 2.0f;
+    bool gameOver = false;
 
-    std::vector<glm::vec3> fishPositions;
+    std::vector<Fish> fishes;
+    int fishCount = 0;
 
-    Cube cube;
     Skybox skybox;
     Model sharkModel;
     Model fishModel;
-    Shader* cubeShader = nullptr;
     Shader* skyboxShader = nullptr;
     Shader* sharkShader = nullptr;
     Shader* fishShader = nullptr;
@@ -481,12 +412,10 @@ public:
 
         glEnable(GL_DEPTH_TEST);
 
-        cubeShader = new Shader("cubemaps.vs", "cubemaps.fs");
         skyboxShader = new Shader("skybox.vs", "skybox.fs");
         sharkShader = new Shader("model.vs", "model.fs");
         fishShader = new Shader("model.vs", "model.fs");
 
-        cube.init(FileSystem::getPath("resources/textures/container.jpg"));
         std::vector<std::string> faces = {
             FileSystem::getPath("resources/textures/skybox/right.jpg"),
             FileSystem::getPath("resources/textures/skybox/left.jpg"),
@@ -499,14 +428,113 @@ public:
         sharkModel.init(MODEL_SHARK_PATH);
         fishModel.init(MODEL_FISH_PATH);
 
-        srand(static_cast<unsigned int>(time(0)));
-        for (int i = 0; i < 20; ++i) {
-            float x = ((rand() % 10000) / 10000.0f - 0.5f) * 20.0f;
-            float y = ((rand() % 10000) / 10000.0f - 0.5f) * 20.0f;
-            float z = ((rand() % 10000) / 10000.0f - 0.5f) * 20.0f;
-            fishPositions.push_back(glm::vec3(x, y, z));
-        }
+        initFishes();
+
+        camera.MovementSpeed = 5.0f;
+
         return true;
+    }
+
+    void initFishes() {
+        srand(static_cast<unsigned int>(time(0)));
+        for (int i = 0; i < GENERATE_FISH; ++i) {
+            glm::vec3 spawn(
+                ((rand() % 10000) / 10000.0f - 0.5f) * 15.0f,
+                ((rand() % 10000) / 10000.0f - 0.5f) * 12.0f,
+                ((rand() % 10000) / 10000.0f - 0.5f) * 15.0f
+            );
+            Fish f;
+            f.spawnCenter = spawn;
+            f.position = spawn;
+            f.target = spawn + glm::vec3(
+                ((rand() % 10000) / 10000.0f - 0.5f) * 4.0f,
+                ((rand() % 10000) / 10000.0f - 0.5f) * 4.0f,
+                ((rand() % 10000) / 10000.0f - 0.5f) * 4.0f
+            );
+            f.speed = 0.5f + ((rand() % 10000) / 10000.0f) * 1.5f;
+            fishes.push_back(f);
+        }
+        fishCount = GENERATE_FISH;
+        renderHUD();
+    }
+
+    void updateFishes(float deltaTime) {
+        for (size_t i = 0; i < fishes.size();) {
+            Fish& f = fishes[i];
+
+            glm::vec3 direction = glm::normalize(f.target - f.position);
+            f.position += direction * f.speed * deltaTime;
+
+            if (glm::length(f.target - f.position) < 0.1f) {
+                f.target = f.spawnCenter + glm::vec3(
+                    ((rand() % 10000) / 10000.0f - 0.5f) * 4.0f,
+                    ((rand() % 10000) / 10000.0f - 0.5f) * 4.0f,
+                    ((rand() % 10000) / 10000.0f - 0.5f) * 4.0f
+                );
+            }
+
+            float distance = glm::length(camera.Position - f.position);
+            if (distance < CATCH_RADIUS) {
+                fishes.erase(fishes.begin() + i);
+                fishCount--;
+
+                renderHUD();
+                continue;
+            }
+            ++i;
+        }
+    }
+
+    void renderHUD() {
+        std::cout << "\rFish left: " << fishCount << " " << std::flush;
+        std::stringstream ss;
+        ss << "Hungry_Fish_3D - Fish left: " << fishCount;
+        glfwSetWindowTitle(window, ss.str().c_str());
+
+        if (fishCount == 0) {
+            glfwSetWindowTitle(window, "Hungry_Fish_3D - You're full. Press Esc to exit.");
+            std::cout << "\nYou're full. Press Esc to exit." << std::endl;
+            gameOver = true;
+        }
+    }
+
+    void renderFishes(const glm::mat4& view, const glm::mat4& projection) {
+        fishShader->use();
+
+        for (const auto& f : fishes) {
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, f.position);
+
+            // Compute direction and yaw (rotation around Y-axis)
+            glm::vec3 dir = glm::normalize(f.target - f.position);
+            float yaw = atan2(dir.x, dir.z);
+
+            // Compute pitch (tilt up/down based on direction.y)
+            float pitch = asin(glm::clamp(dir.y, -1.0f, 1.0f));
+
+            // Apply rotations: yaw (Y-axis) then pitch (X-axis)
+            model = glm::rotate(model, yaw, glm::vec3(0.0f, 1.0f, 0.0f));
+            model = glm::rotate(model, -pitch, glm::vec3(0.5f, 0.0f, 0.0f));
+
+            // Add a body sway (left-right oscillation)
+            float sway = sin(glfwGetTime() * 6.0f + f.position.x * 0.5f) * glm::radians(10.0f);
+            model = glm::rotate(model, sway, glm::vec3(0.0f, 1.0f, 0.0f));
+
+            // Slight roll for more natural swimming (Z-axis wobble)
+            float roll = sin(glfwGetTime() * 3.0f + f.position.z) * glm::radians(3.0f);
+            model = glm::rotate(model, roll, glm::vec3(0.0f, 0.0f, 1.0f));
+
+            // Scale the fish model
+            model = glm::scale(model, glm::vec3(0.7f));
+
+            // Set shader uniforms and draw
+            fishShader->use();
+            fishShader->setMat4("model", model);
+            fishShader->setMat4("view", view);
+            fishShader->setMat4("projection", projection);
+
+            fishModel.draw(*fishShader);
+        }
     }
 
     void run() {
@@ -516,6 +544,7 @@ public:
             lastFrame = currentFrame;
 
             processInput();
+            updateFishes(deltaTime);
             render();
             glfwSwapBuffers(window);
             glfwPollEvents();
@@ -533,18 +562,12 @@ private:
 
         glm::mat4 view = camera.GetViewMatrix();
 
-        cubeShader->use();
-        cubeShader->setMat4("model", glm::mat4(1.0f));
-        cubeShader->setMat4("view", view);
-        cubeShader->setMat4("projection", projection);
-        cube.draw(*cubeShader);
-
         skyboxShader->use();
         skybox.draw(*skyboxShader, camera, projection);
 
         sharkShader->use();
         glm::mat4 modelShark = glm::mat4(1.0f);
-        glm::vec3 offset = glm::vec3(0.0f, -0.4f,  0.0f);
+        glm::vec3 offset = glm::vec3(0.0f, -0.35f, 0.0f);
         modelShark = glm::translate(modelShark, camera.Position + offset);
         modelShark = glm::rotate(modelShark, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         modelShark = glm::rotate(modelShark, glm::radians(camera.Yaw), glm::vec3(0.0f, -1.0f, 0.0f));
@@ -560,27 +583,14 @@ private:
         sharkShader->setMat4("projection", projection);
         sharkModel.draw(*sharkShader);
 
-        fishShader->use();
-
-        for (const glm::vec3& pos : fishPositions) {
-            glm::mat4 modeFish = glm::mat4(1.0f);
-            modeFish = glm::translate(modeFish, pos);
-            
-            float fishSwimAngle = sin(glfwGetTime() * 5.0f + pos.x + pos.z) * glm::radians(5.0f);
-            modeFish = glm::rotate(modeFish, fishSwimAngle, glm::vec3(0.0f, 1.0f, 0.0f));
-
-            modeFish = glm::scale(modeFish, glm::vec3(0.8f));
-            fishShader->setMat4("model", modeFish);
-            fishShader->setMat4("view", view);
-            fishShader->setMat4("projection", projection);
-
-            fishModel.draw(*fishShader);
-        }
+        renderFishes(view,projection);
     }
 
     void processInput() {
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
+
+        if (gameOver) return;
 
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
             camera.ProcessKeyboard(FORWARD, deltaTime);
@@ -631,7 +641,6 @@ private:
 int main() {
     Application app;
     if (!app.init()) return -1;
-    cout<< "Start App";
     app.run();
     return 0;
 }
