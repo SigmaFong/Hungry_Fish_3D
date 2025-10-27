@@ -6,7 +6,7 @@ A 3D game where players control a shark to hunt down and eat a certain number of
 
 ## 🎮 Gameplay Video
 
-<video src="demo.mp4" width="640" controls></video>
+<video src="https://github.com/SigmaFong/Hungry_Fish_3D/blob/main/demo.mp4" width="640" controls></video>
 
 ---
 
